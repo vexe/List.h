@@ -1,6 +1,6 @@
 # DynamicArray.h
 
-STB-style inspired dynamic array. Builds on stb stretchy_buffer adding more functionality.
+STB-style inspired dynamic array. Builds on Sean Barrett's awesome stb stretchy_buffer adding more functionality.
 The idea is to store the count and capacity as two integers in the first two slots of the list memory block
 from malloc/realloc, and then return to the user base pointer + 2 for the rest of the list stroage.
 
