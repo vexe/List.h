@@ -1,5 +1,7 @@
-#include <cstdio> // for printf
-#include <cstdlib> // for malloc/realloc
+#pragma once
+
+#ifndef LIST_H
+#define LIST_H
 
 // STB-style inspired dynamic array. Builds on stb stretchy_buffer adding more functionality
 // The idea is to store the count and capacity as two integers in the first two slots of the list memory block
@@ -24,10 +26,10 @@
 #define ListClear(List) { int Count = ListCount(List); for(int i = 0; i < Count; i++) ListRemoveAt(List, 0); }
 
 // Adds the specified item of type T to the end of the list (regrows the list if necessary)
-#define ListPush(List, T, Item) (_ListCheckGrow(List, T, 1), List[_ListCount(List)++] = Item)
+#define ListPush(List, Item) (_ListCheckGrow(List, 1), List[_ListCount(List)++] = Item)
 
 // Adds 'Amount' of uninitialized items to the list (grows the list by 'Amount') and returns a pointer to the first added element
-#define ListAdd(List, T, Amount) (_ListCheckGrow(List, T, Amount), _ListCount(List) += Amount, &List[_ListCount(List)-Amount])
+#define ListAdd(List, Amount) (_ListCheckGrow(List, Amount), _ListCount(List) += Amount, &List[_ListCount(List)-Amount])
 
 // A handy little list for loop macro. Uses 'i' as the indexer name
 #define ListFor(List) for(int i = 0; i < ListCount(List); i++)
@@ -37,11 +39,11 @@
 #define ListIfItemDoesntExist(List, Item, Index, Compare) ListIndexOf(List, Item, Index, Compare); if (Index == -1)
 
 // Uses qsort to sort the list using the speicified comparison function (must take two const void* parameters and return int)
-#define ListSort(List, T, Compare) qsort(List, ListCount(List), sizeof(T), Compare)
+#define ListSort(List, Compare) qsort(List, ListCount(List), sizeof(decltype(*List)), Compare)
 
 // Inserts the speicified item to the list in an ascending/descending order
-#define ListInsertAscending(List, T, Item, Compare) _ListInsertOrdered(List, T, Item, Compare(it, Item) > 0)
-#define ListInsertDescending(List, T, Item, Compare) _ListInsertOrdered(List, T, Item, Compare(it, Item) < 0)
+#define ListInsertAscending(List, Item, Compare) _ListInsertOrdered(List, Item, Compare(it, Item) > 0)
+#define ListInsertDescending(List, Item, Compare) _ListInsertOrdered(List, Item, Compare(it, Item) < 0)
 
 // A handy little foreach loop that gives you access to the index (i) and value (it) of the current iterating item
 // We take advantage of C++'s 'auto' for type inferance to assign 'it' to the value of the current element
@@ -49,11 +51,11 @@
     for(int i = 0, Toggle = 1;\
         Toggle && i < ListCount(List);\
         i++, Toggle = !Toggle)\
-    for(auto it = (List)[i]; Toggle; Toggle = !Toggle)
+    for(auto &it = (List)[i]; Toggle; Toggle = !Toggle)
 
 // Inserts 'Item' at 'Index' in 'List'
-#define ListInsert(List, T, Item, Index) {\
-    _ListCheckGrow(List, T, 1);\
+#define ListInsert(List, Item, Index) {\
+    _ListCheckGrow(List, 1);\
     for(int _LI = ListCount(List); _LI > Index; _LI--)\
         List[_LI] = List[_LI - 1];\
     List[Index] = Item;\
@@ -99,23 +101,10 @@
 #define _ListHeader(List) ((int*)(List) - 2)
 #define _ListCapacity(List) (_ListHeader(List)[0])
 #define _ListCount(List) (_ListHeader(List)[1])
-#define _ListCheckGrow(List, T, Increment) (!(List) || _ListCount(List) + Increment >= _ListCapacity(List) ?\
-                                           ((List) = (T*)_ListGrow((List), Increment, sizeof(T))) : 0)
+#define _ListCheckGrow(List, Increment) (!(List) || _ListCount(List) + Increment >= _ListCapacity(List) ?\
+                                         ((List) = (decltype(List))_ListGrow((List), Increment, sizeof(decltype(*List)))) : 0)
 
-#define _ListInsertOrdered(List, T, Item, Comparison) {\
-    int _LIA = 0, Count = ListCount(List);\
-    for(; _LIA < Count; _LIA++)\
-    {\
-        T it = List[_LIA];\
-        if (Comparison)\
-        {\
-            ListInsert(List, T, Item, _LIA);\
-            break;\
-        }\
-    }\
-    if (_LIA == Count)\
-        ListInsert(List, T, Item, Count);\
-}
+//((List) = (T*)_ListGrow((List), Increment, sizeof(T))) : 0)
 
 static void* _ListGrow(void* List, int Increment, int ItemSize)
 {
@@ -147,3 +136,19 @@ static void* _ListGrow(void* List, int Increment, int ItemSize)
     }
     return Result + 2;
 }
+
+#define _ListInsertOrdered(List, Item, Comparison) {\
+    int _LIA = 0, Count = ListCount(List);\
+    for(; _LIA < Count; _LIA++)\
+    {\
+        auto it = List[_LIA];\
+        if (Comparison)\
+        {\
+            ListInsert(List, Item, _LIA);\
+            break;\
+        }\
+    }\
+    if (_LIA == Count)\
+        ListInsert(List, Item, Count);\
+}
+#endif
